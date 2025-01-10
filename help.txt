@@ -70,3 +70,10 @@ db.createUser({
 });
 
 git clone https://ivan123:myPassword123@github.com/ivan123/my-project.git
+
+
+
+
+} catch (org.springframework.dao.DataAccessException dae) {
+        responseObserver.onError(new StatusRuntimeException(Status.UNAVAILABLE.withDescription("Database connection error")));
+        System.err.println("Ошибка подключения к базе данных: " + dae.getMessage());
