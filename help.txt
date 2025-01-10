@@ -68,3 +68,5 @@ db.createUser({
     pwd: 'admin',
     roles: [{ role: 'readWrite', db: 'orders' }]
 });
+
+git clone https://ivan123:myPassword123@github.com/ivan123/my-project.git
