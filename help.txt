@@ -1,0 +1,70 @@
+github
+
+dpbukin
+rutppoptop2903
+
+
+http://localhost:9200/ - opensearch
+
+http://localhost:5601/ - Kibana
+
+http://localhost:8888/actuator/prometheus - файл метрик
+
+http://localhost:9200/_cat/indices?v - созданные индексы логирования
+
+http://localhost:9090/ - prometheus
+
+http://localhost:3000/ - grafana
+
+http://localhost:15672/ - RMQ
+
+http://localhost:6379/ - Redis
+
+http://localhost:8081/ - mongo-express
+admin admin
+
+______________________________________________
+Grafana:
+application_ready_time_seconds - Просмотр времени готовности приложения
+http_server_requests_seconds_sum{uri="/actuator/prometheus", status="200"} - Количество запросов HTTP
+http_server_requests_seconds
+http_server_requests_active_seconds
+
+jvm_memory_used_bytes{area="heap", id="G1 Old Gen"} - JVM - Используемая память
+
+jvm_threads_live_threads - JVM - Количество потоков
+
+________________________________________________
+docker:
+
+mvn clean package -DskipTests
+
+docker-compose build
+
+docker-compose up -d
+
+cd /usr/src/dockerdemo/target/
+
+http://localhost:8081/orders/1
+
+http://localhost:8888/orders/all
+
+http://localhost:8888/orders
+{
+  "orderId": "1",
+  "customerName": "John Doe",
+  "amount": 123.45,
+  "date": "2025-01-07"
+}
+
+docker exec -it mongo mongosh -u admin -p admin --authenticationDatabase admin
+
+use orders;
+
+db.getUsers();
+
+db.createUser({
+    user: 'admin',
+    pwd: 'admin',
+    roles: [{ role: 'readWrite', db: 'orders' }]
+});

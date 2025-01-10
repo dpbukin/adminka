@@ -1,0 +1,181 @@
+version: '3.8'
+
+services:
+
+  domainservice:
+    image: domainservice:latest
+    container_name: domainservice
+    build:
+      context: ./domainservice
+    ports:
+      - "8080:8080"  # Прокси порт приложения
+      - "9091:9091"  # Прокси порт gRPC сервера
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    volumes:
+      - ./domainservice:/usr/src/domainservice
+    networks:
+      - backend
+    depends_on:
+      - mongo
+      - rabbitmq
+
+  gateway:
+    image: gateway:latest
+    container_name: gateway
+    build:
+      context: ./gateway
+    ports:
+      - "8888:8888"
+    environment:
+      - GRPC_SERVER_URL=grpc://domainservice:9091
+    volumes:
+      - ./gateway:/usr/src/gateway
+    networks:
+      - backend
+    depends_on:
+      - domainservice
+      - redis
+#      - elasticsearch
+      - opensearch
+      - logstash
+      - kibana
+      - prometheus
+      - grafana
+      - rabbitmq
+
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    networks:
+      - backend
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin
+    volumes:
+      - mongo_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=admin
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin
+      - ME_CONFIG_MONGODB_AUTH_DATABASE=admin
+    depends_on:
+      - mongo
+    networks:
+      - backend
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - backend
+    volumes:
+      - redis_data:/data
+
+  opensearch:
+    image: opensearchproject/opensearch:2.10.0
+    container_name: opensearch
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "DISABLE_SECURITY_PLUGIN=true"
+      - "DISABLE_INSTALL_DEMO_CONFIG=true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - backend
+
+  logstash:
+    image: opensearchproject/logstash-oss-with-opensearch-output-plugin:latest
+    container_name: logstash
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    ports:
+      - "5044:5044"
+      - "5000:5000"
+    environment:
+      - "LS_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "OPENSEARCH_HOSTS=http://opensearch:9200"
+    networks:
+      - backend
+    depends_on:
+      - opensearch
+
+  kibana:
+    image: opensearchproject/opensearch-dashboards:2.10.0
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - 'OPENSEARCH_HOSTS=["http://opensearch:9200"]'
+      - "DISABLE_SECURITY_DASHBOARDS_PLUGIN=true"
+    networks:
+      - backend
+    depends_on:
+      - opensearch
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - backend
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - backend
+
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    networks:
+      - backend
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  redis_data:
+  opensearch-data:
+  domainservice_data:
+  gateway_data:
+  grafana-storage:
